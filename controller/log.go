@@ -3,9 +3,11 @@ package controller
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -125,6 +127,26 @@ func GetLogsStat(c *gin.Context) {
 		},
 	})
 	return
+}
+
+// GetResponseModelMismatchStats reports recorded requests whose upstream
+// response declared a different model than the one requested or mapped.
+// Without an explicit range it covers the last 24 hours.
+func GetResponseModelMismatchStats(c *gin.Context) {
+	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
+	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
+	if endTimestamp <= 0 {
+		endTimestamp = time.Now().Unix()
+	}
+	if startTimestamp <= 0 || startTimestamp > endTimestamp {
+		startTimestamp = endTimestamp - int64((24 * time.Hour).Seconds())
+	}
+	stats, err := service.GetResponseModelMismatchStats(startTimestamp, endTimestamp)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	common.ApiSuccess(c, stats)
 }
 
 func GetLogsSelfStat(c *gin.Context) {
